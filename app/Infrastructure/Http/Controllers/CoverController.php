@@ -52,12 +52,33 @@ final class CoverController
 
     public function upload(Request $request, string $id): JsonResponse
     {
-        $file = $request->file('file');
+        $file = $request->file('cover') ?? $request->file('file');
 
         if ($file === null || !$file->isValid()) {
             throw new ValidationException(
                 message: 'No se envió un archivo de portada válido.',
-                details: [['field' => 'file', 'issue' => 'archivo requerido']]
+                details: [['field' => 'cover', 'issue' => 'El campo cover o file es requerido y debe ser un archivo válido.']]
+            );
+        }
+
+        // Validar tamaño máximo 2048 KB (2MB)
+        if ($file->getSize() > 2048 * 1024) {
+            throw new ValidationException(
+                message: 'El archivo de portada excede el tamaño máximo permitido de 2 MB.',
+                details: [['field' => 'cover', 'issue' => 'El tamaño debe ser de máximo 2048 KB.']]
+            );
+        }
+
+        // Validar tipos MIME / extensiones de imagen soportados
+        $mimeType = $file->getMimeType();
+        $clientExtension = strtolower($file->getClientOriginalExtension());
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        $allowedExts = ['jpeg', 'png', 'jpg', 'webp'];
+
+        if (!in_array($mimeType, $allowedMimes, true) && !in_array($clientExtension, $allowedExts, true)) {
+            throw new ValidationException(
+                message: 'El archivo debe ser una imagen válida (jpeg, png, jpg, webp).',
+                details: [['field' => 'cover', 'issue' => 'Formato de imagen no soportado.']]
             );
         }
 
@@ -65,19 +86,18 @@ final class CoverController
         if ($binaryContent === false) {
             throw new ValidationException(
                 message: 'No se pudo leer el contenido del archivo de portada.',
-                details: [['field' => 'file', 'issue' => 'error de lectura del archivo']]
+                details: [['field' => 'cover', 'issue' => 'Error al leer el archivo.']]
             );
         }
 
-        // Determinar MIME por contenido
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_buffer($finfo, $binaryContent) ?: $file->getMimeType() ?: 'application/octet-stream';
+        $detectedMime = finfo_buffer($finfo, $binaryContent) ?: $mimeType ?: 'image/jpeg';
         finfo_close($finfo);
 
         $coverKey = $this->uploadCoverService->execute(
             bookId: $id,
             binaryContent: $binaryContent,
-            mimeType: $mimeType
+            mimeType: $detectedMime
         );
 
         return response()->json([
