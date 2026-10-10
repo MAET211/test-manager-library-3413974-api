@@ -43,7 +43,7 @@ Route::middleware(['auth.jwt'])->group(function () {
         Route::post('/books', [BookController::class, 'store']);
         Route::put('/books/{id}', [BookController::class, 'update']);
         Route::delete('/books/{id}', [BookController::class, 'destroy']);
-        Route::put('/books/{id}/cover', [CoverController::class, 'upload']);
+        Route::match(['post', 'put'], '/books/{id}/cover', [CoverController::class, 'upload']);
         Route::delete('/books/{id}/cover', [CoverController::class, 'destroy']);
 
         // Reportes (3.7)

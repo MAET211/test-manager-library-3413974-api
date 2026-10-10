@@ -52,6 +52,8 @@ final class CoverController
 
     public function upload(Request $request, string $id): JsonResponse
     {
+        \Illuminate\Support\Facades\Log::info('Archivos recibidos:', $request->allFiles());
+
         $file = $request->file('cover') ?? $request->file('file');
 
         if ($file === null || !$file->isValid()) {
